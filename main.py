@@ -6,15 +6,13 @@ import pandas as pd
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut
 
-# Создание приложения Dash
+
 app = dash.Dash(__name__)
 app.title = "Прогноз погоды по маршруту"
 
-# API-ключ OpenWeatherMap (замените на свой ключ)
 API_KEY = "b56afef8fa4720a9442fe43746d97a6d"
 BASE_URL = "http://api.openweathermap.org/data/2.5/forecast"
 
-# Макет приложения
 app.layout = html.Div([
     html.Div(
         html.H1("Прогноз погоды по маршруту"),
@@ -65,7 +63,6 @@ app.layout = html.Div([
 ], className="main-container")
 
 
-# Функция для получения данных о погоде
 def get_weather_data(location):
     coords = get_coordinates(location)
     if not coords:
