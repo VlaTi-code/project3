@@ -4,6 +4,7 @@ import requests
 import plotly.graph_objects as go
 import pandas as pd
 from geopy.geocoders import Nominatim
+from geopy.exc import GeocoderTimedOut
 
 # Создание приложения Dash
 app = dash.Dash(__name__)
@@ -15,42 +16,56 @@ BASE_URL = "http://api.openweathermap.org/data/2.5/forecast"
 
 # Макет приложения
 app.layout = html.Div([
-    html.H1("Прогноз погоды по маршруту", style={"textAlign": "center"}),
-
-    html.Div([
-        html.Label("Начальная точка:"),
-        dcc.Input(id="start-point", type="text", placeholder="Введите начальную точку", style={"marginRight": "10px"}),
-
-        html.Label("Конечная точка:"),
-        dcc.Input(id="end-point", type="text", placeholder="Введите конечную точку"),
-
-        html.Button("Добавить промежуточную точку", id="add-stop", n_clicks=0, style={"marginLeft": "10px"}),
-
-        html.Div(id="stops-container", children=[]),
-    ], style={"marginBottom": "20px"}),
-
-    html.Label("Выберите временной интервал:", style={"fontWeight": "bold"}),
-    dcc.Dropdown(
-        id="time-interval",
-        options=[
-            {"label": "Сегодня", "value": "today"},
-            {"label": "3 дня", "value": "3days"},
-            {"label": "Неделя", "value": "week"}
-        ],
-        value="today",
-        style={"width": "50%", "marginBottom": "20px"}
+    html.Div(
+        html.H1("Прогноз погоды по маршруту"),
+        className="header"
     ),
 
-    html.Button("Показать прогноз и маршрут", id="show-results", n_clicks=0, style={"marginBottom": "20px"}),
-
-    dcc.Graph(id="weather-graph"),
     html.Div([
-        html.H3("Маршрут на карте:"),
-        dcc.Graph(id="route-map"),
-    ], style={"height": "500px", "marginTop": "20px"}),
-])
+        html.Div([
+            html.Label("Начальная точка:"),
+            dcc.Input(id="start-point", type="text", placeholder="Введите начальную точку", className="form-control"),
+
+            html.Label("Конечная точка:"),
+            dcc.Input(id="end-point", type="text", placeholder="Введите конечную точку", className="form-control"),
+
+            html.Button("Добавить промежуточную точку", id="add-stop", n_clicks=0, className="btn btn-primary"),
+
+            html.Div(id="stops-container", children=[]),
+        ], className="form-container"),
+
+        html.Div([
+            html.Label("Выберите временной интервал:"),
+            dcc.Dropdown(
+                id="time-interval",
+                options=[
+                    {"label": "Сегодня", "value": "today"},
+                    {"label": "3 дня", "value": "3days"},
+                    {"label": "Неделя", "value": "week"}
+                ],
+                value="today",
+                className="form-control"
+            ),
+        ], className="dropdown-container"),
+    ], className="input-section"),
+
+    html.Button("Показать прогноз и маршрут", id="show-results", n_clicks=0, className="btn btn-success"),
+
+    html.Div([
+        html.Div([
+            html.H3("Прогноз температуры:"),
+            dcc.Graph(id="weather-graph"),
+        ], className="graph-container"),
+
+        html.Div([
+            html.H3("Маршрут на карте:"),
+            dcc.Graph(id="route-map"),
+        ], className="graph-container"),
+    ], className="result-section"),
+], className="main-container")
 
 
+# Функция для получения данных о погоде
 def get_weather_data(location):
     coords = get_coordinates(location)
     if not coords:
@@ -66,7 +81,7 @@ def get_weather_data(location):
     }
 
     try:
-        response = requests.get(BASE_URL, params=params)
+        response = requests.get(BASE_URL, params=params, timeout=10)  # Увеличен тайм-аут
         response.raise_for_status()
         data = response.json()
         return data if "list" in data else None
@@ -76,10 +91,13 @@ def get_weather_data(location):
 
 
 def get_coordinates(location):
-    geolocator = Nominatim(user_agent="weather_route_app")
+    geolocator = Nominatim(user_agent="weather_route_app", timeout=10)  # Увеличен тайм-аут
     try:
         location_data = geolocator.geocode(location)
         return (location_data.latitude, location_data.longitude) if location_data else None
+    except GeocoderTimedOut:
+        print(f"Тайм-аут при получении координат для {location}. Попробуйте снова.")
+        return None
     except Exception as e:
         print(f"Ошибка при получении координат для {location}: {e}")
         return None
@@ -95,7 +113,8 @@ def add_stop(n_clicks, children):
         id={"type": "stop", "index": n_clicks},
         type="text",
         placeholder=f"Промежуточная точка {n_clicks}",
-        style={"marginRight": "10px", "marginTop": "10px"}
+        className="form-control",
+        style={"marginTop": "10px"}
     )
     children.append(new_input)
     return children
